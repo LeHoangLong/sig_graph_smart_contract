@@ -12,3 +12,9 @@ The development will be divided into N phases:
 7. Cross network connection and asset transfer.
 
 ## Architecture
+The project is divided into 3 layers: view, controller and service
+
+- View: entry point for request from client. Normalize data if necessary before passing to controller
+- Controller: main logic layer.
+- Service: external service, data access layer or common functionality.
+
