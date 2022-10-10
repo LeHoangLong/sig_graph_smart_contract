@@ -1,5 +1,6 @@
 package utility
 
+//go:generate mockgen -source=$GOFILE -destination ../testutils/utility.go -package mock
 type SettingsI interface {
 	GraphName() string
 	MaxTimeDifference_ms() uint64

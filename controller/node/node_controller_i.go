@@ -10,6 +10,7 @@ import (
 var ErrInvalidSignature = fmt.Errorf("%w: invalid signature", utility.ErrInvalidArgument)
 var ErrInvalidTimestamp = fmt.Errorf("%w: invalid timestamp", utility.ErrInvalidArgument)
 
+//go:generate mockgen -source=$GOFILE -destination ../../testutils/node_controller.go -package mock
 type NodeControllerI interface {
 	// verify that signature matches, timestamp is within allowed limit
 	// return ErrInvalidTimestamp if timestamp fails
