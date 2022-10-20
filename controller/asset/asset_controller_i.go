@@ -4,12 +4,28 @@ import (
 	"context"
 	"sig_graph/controller"
 	"sig_graph/model"
+
+	"github.com/shopspring/decimal"
 )
 
 //go:generate mockgen -source=$GOFILE -destination ../../testutils/asset_controller.go -package mock
 type AssetControllerI interface {
 	// return ErrAlreadyExists f id already used
-	CreateMaterial(ctx context.Context, smartContract controller.SmartContractServiceI, time uint64, id string, signature string, ownerPublicKey string) error
+	CreateAsset(
+		ctx context.Context,
+		smartContract controller.SmartContractServiceI,
+		time uint64,
+		id string,
+		materialName string,
+		quantity decimal.Decimal,
+		unit string,
+		signature string,
+		ownerPublicKey string,
+		ingredientIds []string,
+		ingredientSecretIds []string,
+		secretIds []string,
+		ingredientSignatures []string,
+	) (*model.Asset, error)
 	// return ErrNotFound if no material with id
-	GetMaterial(ctx context.Context, smartContract controller.SmartContractServiceI, id string) (*model.Asset, error)
+	GetAsset(ctx context.Context, smartContract controller.SmartContractServiceI, id string) (*model.Asset, error)
 }

@@ -25,7 +25,7 @@ func (s *nodeNameService) GenerateFullId(id string) (string, error) {
 	}
 
 	if !s.IsIdValid(id) {
-		return "", utility.ErrInvalidArgument
+		return "", fmt.Errorf("%w: invalid id", utility.ErrInvalidArgument)
 	}
 
 	return fmt.Sprintf("%s:%s", s.settings.GraphName(), id), nil

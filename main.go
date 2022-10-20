@@ -27,7 +27,7 @@ func main() {
 	assetView := asset_hyperledger_view.NewAssetView(
 		assetController,
 	)
-
+	//
 	// initialize and start contract
 	chaincode, err := contractapi.NewChaincode(
 		assetView,

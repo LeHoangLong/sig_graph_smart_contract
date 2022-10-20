@@ -2,11 +2,12 @@ package asset_controller
 
 import (
 	"context"
-	"fmt"
 	"sig_graph/controller"
 	node_controller "sig_graph/controller/node"
 	"sig_graph/model"
 	"sig_graph/utility"
+
+	"github.com/shopspring/decimal"
 )
 
 type assetController struct {
@@ -24,47 +25,73 @@ func NewAssetController(
 	}
 }
 
-func (c *assetController) CreateMaterial(
+func (c *assetController) CreateAsset(
 	ctx context.Context,
 	smartContract controller.SmartContractServiceI,
 	time uint64,
 	id string,
+	materialName string,
+	quantity decimal.Decimal,
+	unit string,
 	signature string,
 	ownerPublicKey string,
-) error {
-	if !c.nameService.IsIdValid(id) {
-		return fmt.Errorf("invalid id: %w", utility.ErrInvalidArgument)
+	ingredientIds []string,
+	ingredientSecretIds []string,
+	secretIds []string,
+	ingredientSignatures []string,
+) (*model.Asset, error) {
+	fullId, err := c.nameService.GenerateFullId(id)
+	if err != nil {
+		return nil, err
 	}
 
 	temp := map[any]any{}
-	err := c.nodeController.GetNode(ctx, smartContract, id, &temp)
+	err = c.nodeController.GetNode(ctx, smartContract, fullId, &temp)
 	if err == nil {
-		return utility.ErrAlreadyExists
+		return nil, utility.ErrAlreadyExists
 	}
 
-	fullId, err := c.nameService.GenerateFullId(id)
+	node := model.NewDefaultNode(fullId, model.ENodeTypeAsset, time, time, signature, ownerPublicKey)
+
+	asset := model.Asset{
+		Node:            node,
+		CreationProcess: model.ECreationProcessCreate,
+		Unit:            unit,
+		Quantity:        quantity,
+		MaterialName:    materialName,
+	}
+
+	err = c.nodeController.SetNode(ctx, smartContract, time, &asset)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	node := model.NewDefaultNode(fullId, "asset", time, time, signature, ownerPublicKey)
-	err = c.nodeController.SetNode(ctx, smartContract, time, &node)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return &asset, nil
 }
 
-func (c *assetController) GetMaterial(
+func (c *assetController) GetAsset(
 	ctx context.Context,
 	smartContract controller.SmartContractServiceI,
 	id string,
 ) (*model.Asset, error) {
+	if !c.nameService.IsFullId(id) {
+		if c.nameService.IsIdValid(id) {
+			var err error
+			id, err = c.nameService.GenerateFullId(id)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	asset := model.Asset{}
 	err := c.nodeController.GetNode(ctx, smartContract, id, &asset)
 	if err != nil {
 		return nil, err
+	}
+
+	if asset.NodeType != model.ENodeTypeAsset {
+		return nil, utility.ErrInvalidNodeType
 	}
 	return &asset, nil
 }

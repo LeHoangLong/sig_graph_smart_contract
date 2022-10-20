@@ -3,11 +3,14 @@ package node_controller
 import (
 	"context"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/sha512"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"sig_graph/controller"
 	"sig_graph/utility"
 )
@@ -23,7 +26,11 @@ func NewNodeController(
 	settings utility.SettingsI,
 	nameService controller.NodeNameServiceI,
 ) NodeControllerI {
-	return &nodeController{}
+	return &nodeController{
+		clock:       clock,
+		settings:    settings,
+		nameService: nameService,
+	}
 }
 
 func (c *nodeController) SetNode(
@@ -74,7 +81,8 @@ func (c *nodeController) SetNode(
 	if tempSignature, ok := nodeMap["signature"]; !ok {
 		return utility.ErrInvalidArgument
 	} else {
-		if tempSignature, ok := tempSignature.(string); ok {
+
+		if tempSignature, ok := tempSignature.(string); !ok {
 			return utility.ErrInvalidArgument
 		} else {
 			signature = tempSignature
@@ -82,6 +90,7 @@ func (c *nodeController) SetNode(
 	}
 
 	delete(nodeMap, "signature")
+
 	nodeWithoutSignatureJson, err := json.Marshal(nodeMap)
 	if err != nil {
 		return err
@@ -104,15 +113,33 @@ func (c *nodeController) GetNode(ctx context.Context, smartContract controller.S
 
 func (c *nodeController) verify(data string, publicKey string, signature string) error {
 	block, _ := pem.Decode([]byte(publicKey))
-	publicKeyParsed, err := x509.ParsePKCS1PublicKey(block.Bytes)
+	publicKeyParsed, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
 		return err
 	}
 
 	hash := sha512.Sum512([]byte(data))
-	err = rsa.VerifyPKCS1v15(publicKeyParsed, crypto.SHA512, hash[:], []byte(signature))
+
+	signatureParsed, err := base64.StdEncoding.DecodeString(signature)
 	if err != nil {
-		return ErrInvalidSignature
+		return fmt.Errorf("%w: cannot decode base64 signature", utility.ErrInvalidArgument)
 	}
-	return nil
+
+	if rsaKey, ok := publicKeyParsed.(*rsa.PublicKey); ok {
+		err = rsa.VerifyPKCS1v15(rsaKey, crypto.SHA512, hash[:], []byte(signatureParsed))
+		if err != nil {
+			return ErrInvalidSignature
+		}
+
+		return nil
+	} else if ecdsaKey, ok := publicKeyParsed.(*ecdsa.PublicKey); ok {
+		verified := ecdsa.VerifyASN1(ecdsaKey, hash[:], []byte(signatureParsed))
+		if !verified {
+			return ErrInvalidSignature
+		}
+
+		return nil
+	} else {
+		return fmt.Errorf("%w: unsupported signature algorithm", utility.ErrInvalidArgument)
+	}
 }

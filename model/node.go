@@ -3,7 +3,7 @@ package model
 type ENodeType string
 
 const (
-	eNodeTypeAsset ENodeType = "asset"
+	ENodeTypeAsset ENodeType = "asset"
 )
 
 type Node struct {

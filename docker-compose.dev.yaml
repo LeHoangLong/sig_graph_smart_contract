@@ -1,0 +1,12 @@
+version: '3.0'
+services:
+  smart_contract:
+    image: hyperledger/fabric-tools
+    volumes:
+      - ./:/root/sig_graph
+      - ./dev/test-network:/opt/fabric
+    working_dir: /root/sig_graph
+    command: bash -c 'git config --global --add safe.directory /root/sig_graph && sleep infinity'
+    network_mode: host
+    environment:
+      - FABRIC_HOME=/opt/fabric
