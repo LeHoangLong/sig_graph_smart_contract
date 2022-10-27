@@ -2,6 +2,8 @@ package asset_controller
 
 import (
 	"context"
+	"crypto/sha512"
+	"fmt"
 	"sig_graph/controller"
 	node_controller "sig_graph/controller/node"
 	"sig_graph/model"
@@ -94,4 +96,107 @@ func (c *assetController) GetAsset(
 		return nil, utility.ErrInvalidNodeType
 	}
 	return &asset, nil
+}
+
+func (c *assetController) TransferAsset(
+	ctx context.Context,
+	smartContract controller.SmartContractServiceI,
+	time_ms uint64,
+	currentId string,
+	currentSecret string,
+	currentSignature string,
+	newId string,
+	newSecret string,
+	newSignature string,
+	newOwnerPublicKey string,
+) (*model.Asset, error) {
+	if !c.nameService.IsFullId(currentId) {
+		if c.nameService.IsIdValid(currentId) {
+			var err error
+			currentId, err = c.nameService.GenerateFullId(currentId)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if !c.nameService.IsFullId(newId) {
+		if c.nameService.IsIdValid(newId) {
+			var err error
+			newId, err = c.nameService.GenerateFullId(newId)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	exist, err := c.nodeController.DoNodeIdsExist(
+		ctx,
+		smartContract,
+		map[string]bool{
+			currentId: true,
+			newId:     true,
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !exist[currentId] {
+		return nil, utility.ErrNotFound
+	}
+
+	if exist[newId] {
+		return nil, utility.ErrAlreadyExists
+	}
+
+	asset, err := c.GetAsset(
+		ctx,
+		smartContract,
+		currentId,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// create new node first in case this fails, the new node simply just
+	// become an orphan node
+	newAsset := *asset
+	newAsset.CreatedTime = time_ms
+	newAsset.UpdatedTime = time_ms
+	newAsset.OwnerPublicKey = newOwnerPublicKey
+	newAsset.Id = newId
+	if currentSecret != "" {
+		currentSecretId := fmt.Sprintf("%s%s", currentId, currentSecret)
+		currentHashBytes := sha512.Sum512([]byte(currentSecretId))
+		currentHash := string(currentHashBytes[:])
+		newAsset.PrivateParentsHashedIds[currentHash] = true
+	} else {
+		newAsset.PublicParentsIds[currentId] = true
+	}
+
+	err = c.nodeController.SetNode(ctx, smartContract, time_ms, &newAsset)
+	if err != nil {
+		return nil, err
+	}
+
+	// update current node
+	asset.UpdatedTime = time_ms
+	if newSecret != "" {
+		newSecretId := fmt.Sprintf("%s%s", newId, newSecret)
+		newHashBytes := sha512.Sum512([]byte(newSecretId))
+		newHash := string(newHashBytes[:])
+		asset.PrivateChildrenHashedIds[newHash] = true
+	} else {
+		asset.PublicChildrenIds[newId] = true
+	}
+
+	err = c.nodeController.SetNode(ctx, smartContract, time_ms, asset)
+	if err != nil {
+		return nil, err
+	}
+
+	return &newAsset, nil
 }

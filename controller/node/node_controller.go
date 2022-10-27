@@ -111,6 +111,25 @@ func (c *nodeController) GetNode(ctx context.Context, smartContract controller.S
 	return smartContract.GetState(ctx, nodeId, node)
 }
 
+func (c *nodeController) DoNodeIdsExist(ctx context.Context, smartContract controller.SmartContractServiceI, nodeIds map[string]bool) (map[string]bool, error) {
+	ret := map[string]bool{}
+	for id := range nodeIds {
+		node := map[any]any{}
+		err := smartContract.GetState(ctx, id, &node)
+		if err != nil {
+			if err != utility.ErrNotFound {
+				return nil, err
+			}
+
+			ret[id] = false
+		} else {
+			ret[id] = true
+		}
+
+	}
+	return ret, nil
+}
+
 func (c *nodeController) verify(data string, publicKey string, signature string) error {
 	block, _ := pem.Decode([]byte(publicKey))
 	publicKeyParsed, err := x509.ParsePKIXPublicKey(block.Bytes)

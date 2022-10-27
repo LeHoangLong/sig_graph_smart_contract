@@ -14,7 +14,7 @@ type AssetControllerI interface {
 	CreateAsset(
 		ctx context.Context,
 		smartContract controller.SmartContractServiceI,
-		time uint64,
+		time_ms uint64,
 		id string,
 		materialName string,
 		quantity decimal.Decimal,
@@ -28,4 +28,19 @@ type AssetControllerI interface {
 	) (*model.Asset, error)
 	// return ErrNotFound if no material with id
 	GetAsset(ctx context.Context, smartContract controller.SmartContractServiceI, id string) (*model.Asset, error)
+	// return ErrNotFound if no material with currentId
+	// return ErrAlreadyExists if newId already used
+	// return new transferred asset
+	TransferAsset(
+		ctx context.Context,
+		smartContract controller.SmartContractServiceI,
+		time_ms uint64,
+		currentId string,
+		currentSecret string,
+		currentSignature string,
+		newId string,
+		newSecret string,
+		newSignature string,
+		newOwnerPublicKey string,
+	) (*model.Asset, error)
 }
