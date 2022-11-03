@@ -15,13 +15,15 @@ func main() {
 	// intialize utility
 	settings := utility.NewSettings("sgp://hyper:[http://localhost:7051,http://localhost:9051]:public")
 	clockReal := utility.NewClockRealtime()
+	cloner := utility.NewCloner()
 
 	// initialize servcies
 	nameService := service.NewNodeNameService(settings)
+	hashGeneratorService := service.NewHashGenerator()
 
 	// initialize controllers
 	nodeController := node_controller.NewNodeController(clockReal, settings, nameService)
-	assetController := asset_controller.NewAssetController(nodeController, nameService)
+	assetController := asset_controller.NewAssetController(nodeController, nameService, hashGeneratorService, cloner)
 
 	// initialize views
 	assetView := asset_hyperledger_view.NewAssetView(

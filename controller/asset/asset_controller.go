@@ -2,8 +2,6 @@ package asset_controller
 
 import (
 	"context"
-	"crypto/sha512"
-	"fmt"
 	"sig_graph/controller"
 	node_controller "sig_graph/controller/node"
 	"sig_graph/model"
@@ -15,15 +13,21 @@ import (
 type assetController struct {
 	nodeController node_controller.NodeControllerI
 	nameService    controller.NodeNameServiceI
+	hashGenerator  controller.HashGeneratorI
+	cloner         utility.ClonerI
 }
 
 func NewAssetController(
 	nodeController node_controller.NodeControllerI,
 	nameService controller.NodeNameServiceI,
+	hashGenerator controller.HashGeneratorI,
+	cloner utility.ClonerI,
 ) AssetControllerI {
 	return &assetController{
 		nodeController: nodeController,
 		nameService:    nameService,
+		hashGenerator:  hashGenerator,
+		cloner:         cloner,
 	}
 }
 
@@ -163,15 +167,19 @@ func (c *assetController) TransferAsset(
 
 	// create new node first in case this fails, the new node simply just
 	// become an orphan node
-	newAsset := *asset
+	newAsset := &model.Asset{}
+	err = c.cloner.Clone(ctx, asset, newAsset)
+	if err != nil {
+		return nil, err
+	}
 	newAsset.CreatedTime = time_ms
 	newAsset.UpdatedTime = time_ms
 	newAsset.OwnerPublicKey = newOwnerPublicKey
+	newAsset.CreationProcess = model.ECreationProcessTransfer
+	newAsset.Signature = newSignature
 	newAsset.Id = newId
 	if currentSecret != "" {
-		currentSecretId := fmt.Sprintf("%s%s", currentId, currentSecret)
-		currentHashBytes := sha512.Sum512([]byte(currentSecretId))
-		currentHash := string(currentHashBytes[:])
+		currentHash := c.hashGenerator.New(currentId, currentSecret)
 		newAsset.PrivateParentsHashedIds[currentHash] = true
 	} else {
 		newAsset.PublicParentsIds[currentId] = true
@@ -183,20 +191,25 @@ func (c *assetController) TransferAsset(
 	}
 
 	// update current node
-	asset.UpdatedTime = time_ms
+	updatedAsset := &model.Asset{}
+	err = c.cloner.Clone(ctx, asset, updatedAsset)
+	if err != nil {
+		return nil, err
+	}
+	updatedAsset.UpdatedTime = time_ms
+	updatedAsset.Signature = currentSignature
 	if newSecret != "" {
-		newSecretId := fmt.Sprintf("%s%s", newId, newSecret)
-		newHashBytes := sha512.Sum512([]byte(newSecretId))
-		newHash := string(newHashBytes[:])
-		asset.PrivateChildrenHashedIds[newHash] = true
+		newHash := c.hashGenerator.New(newId, newSecret)
+		updatedAsset.PrivateChildrenHashedIds[newHash] = true
 	} else {
-		asset.PublicChildrenIds[newId] = true
+		updatedAsset.PublicChildrenIds[newId] = true
 	}
 
-	err = c.nodeController.SetNode(ctx, smartContract, time_ms, asset)
+	err = c.nodeController.SetNode(ctx, smartContract, time_ms, updatedAsset)
 	if err != nil {
 		return nil, err
 	}
 
-	return &newAsset, nil
+	return nil, utility.ErrNotFound
+	return newAsset, nil
 }

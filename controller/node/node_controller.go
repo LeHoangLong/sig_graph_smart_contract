@@ -67,7 +67,7 @@ func (c *nodeController) SetNode(
 
 	localTime := c.clock.Now_ms()
 	if localTime < time_ms || localTime-time_ms > c.settings.MaxTimeDifference_ms() {
-		return ErrInvalidTimestamp
+		return fmt.Errorf("%w: local time: %d, time_ms: %d, max diff: %d", ErrInvalidTimestamp, localTime, time_ms, c.settings.MaxTimeDifference_ms())
 	}
 
 	ownerPublicKey := ""
@@ -114,7 +114,7 @@ func (c *nodeController) GetNode(ctx context.Context, smartContract controller.S
 func (c *nodeController) DoNodeIdsExist(ctx context.Context, smartContract controller.SmartContractServiceI, nodeIds map[string]bool) (map[string]bool, error) {
 	ret := map[string]bool{}
 	for id := range nodeIds {
-		node := map[any]any{}
+		node := map[string]any{}
 		err := smartContract.GetState(ctx, id, &node)
 		if err != nil {
 			if err != utility.ErrNotFound {

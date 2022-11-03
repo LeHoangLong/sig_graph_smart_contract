@@ -111,3 +111,51 @@ func (c *assetView) GetAsset(
 	viewAsset := FromModelAsset(modelAsset)
 	return &viewAsset, nil
 }
+
+type transefrAssetRequest struct {
+	TimeMs uint64 `json:"time_ms"`
+
+	CurrentId        string `json:"current_id"`
+	CurrentSignature string `json:"current_signature"`
+	CurrentSecret    string `json:"current_secret"`
+
+	NewId        string `json:"new_id"`
+	NewSignature string `json:"new_signature"`
+	NewSecret    string `json:"new_secret"`
+
+	NewOwnerPublicKey string `json:"new_owner_public_key"`
+}
+
+func (v *assetView) TransferAsset(
+	transaction contractapi.TransactionContextInterface,
+	requestJson string,
+) (*asset, error) {
+	ctx := context.Background()
+	service := service.NewSmartContractServiceHyperledger(transaction)
+
+	request := transefrAssetRequest{}
+	err := json.Unmarshal([]byte(requestJson), &request)
+	if err != nil {
+		return nil, err
+	}
+
+	newAsset, err := v.controller.TransferAsset(
+		ctx,
+		service,
+		request.TimeMs,
+		request.CurrentId,
+		request.CurrentSecret,
+		request.CurrentSignature,
+		request.NewId,
+		request.NewSecret,
+		request.NewSignature,
+		request.NewOwnerPublicKey,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	viewAsset := FromModelAsset(newAsset)
+	return &viewAsset, nil
+}
