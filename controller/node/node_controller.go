@@ -65,6 +65,15 @@ func (c *nodeController) SetNode(
 		nodeMap["id"] = nodeId
 	}
 
+	isNodeFinalized, err := c.isNodeFinalized(ctx, smartContract, nodeId)
+	if err != nil {
+		if err != utility.ErrNotFound {
+			return err
+		}
+	} else if isNodeFinalized {
+		return fmt.Errorf("%w: node is finalized", utility.ErrInvalidState)
+	}
+
 	localTime := c.clock.Now_ms()
 	if localTime < time_ms || localTime-time_ms > c.settings.MaxTimeDifference_ms() {
 		return fmt.Errorf("%w: local time: %d, time_ms: %d, max diff: %d", ErrInvalidTimestamp, localTime, time_ms, c.settings.MaxTimeDifference_ms())
@@ -128,6 +137,24 @@ func (c *nodeController) DoNodeIdsExist(ctx context.Context, smartContract contr
 
 	}
 	return ret, nil
+}
+
+func (c *nodeController) isNodeFinalized(
+	ctx context.Context,
+	smartContract controller.SmartContractServiceI,
+	nodeId string,
+) (bool, error) {
+	node := map[string]any{}
+	err := smartContract.GetState(ctx, nodeId, &node)
+	if err != nil {
+		return false, err
+	}
+
+	if isFinalized, ok := node["is_finalized"].(bool); !ok {
+		return false, utility.ErrInvalidState
+	} else {
+		return isFinalized, nil
+	}
 }
 
 func (c *nodeController) verify(data string, publicKey string, signature string) error {

@@ -199,6 +199,7 @@ func (c *assetController) TransferAsset(
 	}
 	updatedAsset.UpdatedTime = time_ms
 	updatedAsset.Signature = currentSignature
+	updatedAsset.IsFinalized = true
 	if newSecret != "" {
 		newHash := c.hashGenerator.New(newId, newSecret)
 		updatedAsset.PrivateChildrenHashedIds[newHash] = true
