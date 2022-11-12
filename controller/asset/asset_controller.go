@@ -176,6 +176,7 @@ func (c *assetController) TransferAsset(
 	newAsset.UpdatedTime = time_ms
 	newAsset.OwnerPublicKey = newOwnerPublicKey
 	newAsset.CreationProcess = model.ECreationProcessTransfer
+	newAsset.ClearAllEdges()
 	newAsset.Signature = newSignature
 	newAsset.Id = newId
 	if currentSecret != "" {
@@ -210,6 +211,5 @@ func (c *assetController) TransferAsset(
 		return nil, err
 	}
 
-	return nil, utility.ErrNotFound
 	return newAsset, nil
 }
