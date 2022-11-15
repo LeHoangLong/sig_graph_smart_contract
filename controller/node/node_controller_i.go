@@ -19,10 +19,10 @@ type NodeControllerI interface {
 	// set updatedTime to timestamp
 	// set id to full id if it is not
 	SetNode(ctx context.Context, smartContract controller.SmartContractServiceI, time_ms uint64, node any) error
-	// return ErrNotFound if no node with id
-	GetNode(ctx context.Context, smartContract controller.SmartContractServiceI, nodeId string, node any) error
 	// check if node ids exist
 	// for every key in nodeIds, a corresponding entry in the output will indicate whether the
 	// id already exists
 	DoNodeIdsExist(ctx context.Context, smartContract controller.SmartContractServiceI, nodeIds map[string]bool) (map[string]bool, error)
+	// return ErrNotFound if any one id does not exist
+	GetNodes(ctx context.Context, smartContract controller.SmartContractServiceI, ids map[string]bool) (nodes map[string]any, err error)
 }

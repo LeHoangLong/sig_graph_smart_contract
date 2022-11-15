@@ -11,8 +11,13 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"reflect"
 	"sig_graph/controller"
+	"sig_graph/model"
 	"sig_graph/utility"
+
+	"github.com/mitchellh/mapstructure"
+	"github.com/shopspring/decimal"
 )
 
 type nodeController struct {
@@ -116,10 +121,6 @@ func (c *nodeController) SetNode(
 	return nil
 }
 
-func (c *nodeController) GetNode(ctx context.Context, smartContract controller.SmartContractServiceI, nodeId string, node any) error {
-	return smartContract.GetState(ctx, nodeId, node)
-}
-
 func (c *nodeController) DoNodeIdsExist(ctx context.Context, smartContract controller.SmartContractServiceI, nodeIds map[string]bool) (map[string]bool, error) {
 	ret := map[string]bool{}
 	for id := range nodeIds {
@@ -188,4 +189,59 @@ func (c *nodeController) verify(data string, publicKey string, signature string)
 	} else {
 		return fmt.Errorf("%w: unsupported signature algorithm", utility.ErrInvalidArgument)
 	}
+}
+
+func StringToDecimalHookFunc() mapstructure.DecodeHookFunc {
+	return func(
+		f reflect.Type,
+		t reflect.Type,
+		data interface{}) (interface{}, error) {
+		if f.Kind() != reflect.String {
+			return data, nil
+		}
+		if t != reflect.TypeOf(decimal.NewFromInt(0)) {
+			return data, nil
+		}
+
+		// Convert it by parsing
+		return decimal.NewFromString(data.(string))
+	}
+}
+
+// return ErrNotFound if any one id does not exist
+func (c *nodeController) GetNodes(
+	ctx context.Context,
+	smartContract controller.SmartContractServiceI,
+	ids map[string]bool,
+) (map[string]any, error) {
+	ret := map[string]any{}
+
+	for id := range ids {
+		nodeMap := map[string]any{}
+		err := smartContract.GetState(ctx, id, &nodeMap)
+		if err != nil {
+			return nil, err
+		}
+		mapJson, _ := json.Marshal(nodeMap)
+
+		nodeType := nodeMap["type"]
+		fmt.Printf("nodeMap %+v\n", nodeMap)
+		fmt.Println("nodeType ", nodeType)
+		switch nodeType {
+		case model.ENodeTypeAsset:
+			asset := model.Asset{}
+			err = json.Unmarshal(mapJson, &asset)
+			if err != nil {
+				return nil, err
+			}
+
+			fmt.Printf("asset: %+v\n", asset)
+			ret[id] = asset
+		default:
+			fmt.Println("invalid type 1")
+			return nil, utility.ErrInvalidNodeType
+		}
+	}
+
+	return ret, nil
 }

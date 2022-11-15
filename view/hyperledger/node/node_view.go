@@ -44,3 +44,37 @@ func (c *nodeView) DoNodeIdsExist(
 	return c.controller.DoNodeIdsExist(ctx, service, ids)
 
 }
+
+type getNodesByIdRequest struct {
+	Ids map[string]bool `json:"ids"`
+}
+
+func (v *nodeView) GetNodesById(
+	transaction contractapi.TransactionContextInterface,
+	requestJson string,
+) (string, error) {
+	ctx := context.Background()
+	service := service.NewSmartContractServiceHyperledger(transaction)
+
+	request := getNodesByIdRequest{}
+	err := json.Unmarshal([]byte(requestJson), &request)
+	if err != nil {
+		return "", err
+	}
+
+	nodes, err := v.controller.GetNodes(
+		ctx,
+		service,
+		request.Ids,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	nodesJson, err := json.Marshal(nodes)
+	if err != nil {
+		return "", err
+	}
+
+	return string(nodesJson), nil
+}

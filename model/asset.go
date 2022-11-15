@@ -10,9 +10,9 @@ const (
 )
 
 type Asset struct {
-	Node
-	CreationProcess ECreationProcess `json:"creation_process"`
-	Unit            string           `json:"unit"`
-	Quantity        decimal.Decimal  `json:"quantity"`
-	MaterialName    string           `json:"material_name"`
+	Node            `mapstructure:",squash"`
+	CreationProcess ECreationProcess `json:"creation_process" mapstructure:"creation_process"`
+	Unit            string           `json:"unit"  mapstructure:"unit"`
+	Quantity        decimal.Decimal  `json:"quantity"  mapstructure:"quantity"`
+	MaterialName    string           `json:"material_name"  mapstructure:"material_name"`
 }

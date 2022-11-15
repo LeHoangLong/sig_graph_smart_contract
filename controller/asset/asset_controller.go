@@ -2,6 +2,7 @@ package asset_controller
 
 import (
 	"context"
+	"fmt"
 	"sig_graph/controller"
 	node_controller "sig_graph/controller/node"
 	"sig_graph/model"
@@ -51,9 +52,13 @@ func (c *assetController) CreateAsset(
 		return nil, err
 	}
 
-	temp := map[any]any{}
-	err = c.nodeController.GetNode(ctx, smartContract, fullId, &temp)
-	if err == nil {
+	exist, err := c.nodeController.DoNodeIdsExist(ctx, smartContract, map[string]bool{
+		fullId: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if exist[fullId] {
 		return nil, utility.ErrAlreadyExists
 	}
 
@@ -90,16 +95,22 @@ func (c *assetController) GetAsset(
 		}
 	}
 
-	asset := model.Asset{}
-	err := c.nodeController.GetNode(ctx, smartContract, id, &asset)
+	nodes, err := c.nodeController.GetNodes(ctx, smartContract, map[string]bool{
+		id: true,
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	if asset.NodeType != model.ENodeTypeAsset {
-		return nil, utility.ErrInvalidNodeType
+	if len(nodes) == 0 {
+		return nil, utility.ErrNotFound
 	}
-	return &asset, nil
+
+	if asset, ok := nodes[id].(model.Asset); !ok {
+		fmt.Println("invalid type 2")
+		return nil, utility.ErrInvalidNodeType
+	} else {
+		return &asset, nil
+	}
 }
 
 func (c *assetController) TransferAsset(
