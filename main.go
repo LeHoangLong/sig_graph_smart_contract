@@ -7,6 +7,7 @@ import (
 	"sig_graph/service"
 	"sig_graph/utility"
 	asset_hyperledger_view "sig_graph/view/hyperledger/asset"
+	node_hyperledger_view "sig_graph/view/hyperledger/node"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
@@ -29,10 +30,15 @@ func main() {
 	assetView := asset_hyperledger_view.NewAssetView(
 		assetController,
 	)
+	nodeView := node_hyperledger_view.NewNodeView(
+		nodeController,
+	)
+
 	//
 	// initialize and start contract
 	chaincode, err := contractapi.NewChaincode(
 		assetView,
+		nodeView,
 	)
 
 	if err != nil {

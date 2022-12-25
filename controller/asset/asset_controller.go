@@ -2,7 +2,6 @@ package asset_controller
 
 import (
 	"context"
-	"fmt"
 	"sig_graph/controller"
 	node_controller "sig_graph/controller/node"
 	"sig_graph/model"
@@ -106,7 +105,6 @@ func (c *assetController) GetAsset(
 	}
 
 	if asset, ok := nodes[id].(model.Asset); !ok {
-		fmt.Println("invalid type 2")
 		return nil, utility.ErrInvalidNodeType
 	} else {
 		return &asset, nil
