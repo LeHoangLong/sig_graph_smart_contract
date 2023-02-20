@@ -1,5 +1,5 @@
 // Copyright (C) THEDATE Le Hoang Long
-// This file is part of SigGraph SCP <https://github.com/LeHoangLong/sig_graph_scp>.
+// This file is part of SigGraph smart contract <https://github.com/LeHoangLong/sig_graph_smart_contract>.
 // 
 // SigGraph is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
