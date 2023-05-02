@@ -1,16 +1,16 @@
 // Copyright (C) 2022 Le Hoang Long
 // This file is part of SigGraph smart contract <https://github.com/LeHoangLong/sig_graph_smart_contract>.
-// 
+//
 // SigGraph is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-// 
+//
 // SigGraph is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with SigGraph.  If not, see <http://www.gnu.org/licenses/>.
 package service
@@ -34,13 +34,13 @@ func NewNodeNameService(
 	}
 }
 
-func (s *nodeNameService) GenerateFullId(id string) (string, error) {
+func (s *nodeNameService) GenerateFullId(id string) (string, utility.Error) {
 	if s.IsFullId(id) {
 		return id, nil
 	}
 
 	if !s.IsIdValid(id) {
-		return "", fmt.Errorf("%w: invalid id", utility.ErrInvalidArgument)
+		return "", utility.NewError(utility.ErrInvalidArgument).AddMessage("invalid id")
 	}
 
 	return fmt.Sprintf("%s:%s", s.settings.GraphName(), id), nil

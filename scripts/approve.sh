@@ -2,7 +2,7 @@ export CC_PACKAGE_ID=$(peer lifecycle chaincode queryinstalled | sed -n -r "s/Pa
 echo $CC_PACKAGE_ID
 
 # approve for org 2
-export CORE_PEER_LOCALMSPID="Org2MSP"
+export CORE_PEER_LOCALMSPID="peer-org-1"
 export CORE_PEER_TLS_ROOTCERT_FILE=${FABRIC_HOME}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
 export CORE_PEER_MSPCONFIGPATH=${FABRIC_HOME}/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp
 export CORE_PEER_ADDRESS=localhost:9051

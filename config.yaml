@@ -1,0 +1,14 @@
+NodeOUs:
+  Enable: true
+  ClientOUIdentifier:
+    Certificate: /etc/hyperledger/fabric/tls/ca.crt
+    OrganizationalUnitIdentifier: client
+  PeerOUIdentifier:
+    Certificate: /etc/hyperledger/fabric/tls/ca.crt
+    OrganizationalUnitIdentifier: peer
+  AdminOUIdentifier:
+    Certificate: /etc/hyperledger/fabric/tls/ca.crt
+    OrganizationalUnitIdentifier: admin
+  OrdererOUIdentifier:
+    Certificate: /etc/hyperledger/fabric/tls/ca.crt
+    OrganizationalUnitIdentifier: orderer

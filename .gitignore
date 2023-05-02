@@ -6,3 +6,4 @@ dev
 token.tar.gz
 .bash_history
 vendor
+organizations/*
