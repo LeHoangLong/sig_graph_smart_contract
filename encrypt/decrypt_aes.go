@@ -7,7 +7,7 @@ import (
 )
 
 type DecryptAes[T any] struct {
-	decrypted T
+	Decrypted T
 }
 
 func newDecryptAes[T any](
@@ -32,12 +32,12 @@ func newDecryptAes[T any](
 		if trackedErr != nil {
 			return &ret, trackedErr
 		}
-		ret.decrypted = val
+		ret.Decrypted = val
 		return &ret, nil
 	}
 
 }
 
 func (d *DecryptAes[T]) Get() T {
-	return d.decrypted
+	return d.Decrypted
 }

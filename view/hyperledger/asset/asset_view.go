@@ -23,6 +23,7 @@ import (
 	"sig_graph/encrypt"
 	"sig_graph/model"
 	"sig_graph/service"
+	"sig_graph/utility"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
@@ -41,9 +42,11 @@ func NewAssetView(
 }
 
 type createAssetRequest struct {
-	CreationProcess encrypt.ToBeEncrypted[model.ECreationProcess] `json:"creation_process"`
-	TransactionTime encrypt.ToBeEncrypted[int64]                  `json:"transaction_time"`
-	Asset           model.NodeAsset                               `json:"asset"`
+	CreationProcess *encrypt.ToBeEncrypted[model.ECreationProcess] `json:"creation_process"`
+	TransactionTime encrypt.ToBeEncrypted[int64]                   `json:"transaction_time"`
+	OwnerPublicKeys []encrypt.ToBeEncrypted[string]                `json:"owner_public_keys"`
+	Signatures      []string                                       `json:"signatures"`
+	Asset           model.NodeAsset                                `json:"asset"`
 }
 
 type asset struct {
@@ -57,27 +60,47 @@ func (c *assetView) CreateAsset(
 	Transaction contractapi.TransactionContextInterface,
 	RequestJson string,
 ) (string, error) {
+	var stackErr utility.Error
 	request := createAssetRequest{}
 	err := json.Unmarshal([]byte(RequestJson), &request)
 	if err != nil {
 		return "", err
 	}
 
+	creationProcessType := encrypt.ToBeEncrypted[model.ECreationProcess]{
+		EncryptionType: encrypt.ENCRYPT_TYPE_UNENCRYPTED,
+		Value:          model.ECreationProcessCreate,
+	}
+
+	if request.CreationProcess != nil {
+		creationProcessType = *request.CreationProcess
+	}
+
+	request.Asset.Header.OwnerPublicKeys = make([]encrypt.Encrypted[string], len(request.OwnerPublicKeys))
+	for i := range request.OwnerPublicKeys {
+		encryptedKey, stackErr := encrypt.BuildEncrypted(&request.OwnerPublicKeys[i])
+		if stackErr != nil {
+			return "", fmt.Errorf(stackErr.Message())
+		}
+		request.Asset.Header.OwnerPublicKeys[i] = *encryptedKey
+	}
+
 	ctx := context.Background()
 	service := service.NewSmartContractServiceHyperledger(Transaction)
+
+	createAssetArgs := asset_controller.CreateAssetArgs{
+		SmartContract:       service,
+		TransactionTime:     &request.TransactionTime,
+		CreationProcessType: &creationProcessType,
+		Asset:               &request.Asset,
+		Signatures:          request.Signatures,
+	}
 	modelAsset, stackErr := c.controller.CreateAsset(
 		ctx,
-		service,
-		&request.TransactionTime,
-		&request.CreationProcess,
-		&request.Asset,
+		&createAssetArgs,
 	)
 	if stackErr != nil {
 		return "", fmt.Errorf(stackErr.String())
-	}
-
-	if err != nil {
-		return "", err
 	}
 
 	assetJson, err := json.Marshal(modelAsset)
@@ -89,16 +112,15 @@ func (c *assetView) CreateAsset(
 }
 
 type transefrAssetRequest struct {
-	TimeMs uint64 `json:"time_ms"`
-
-	CurrentId                 encrypt.ToBeEncrypted[string] `json:"current_id"`
-	CurrentSignature          string                        `json:"current_signature"`
-	CurrentTransactionTime_ms encrypt.ToBeEncrypted[int64]  `json:"current_transaction_time_ms"`
-	NewId                     encrypt.ToBeEncrypted[string]
-	NewSignature              string
-	NewOwnerPublicKey         encrypt.ToBeEncrypted[string]
-	NewTransactionTime_ms     encrypt.ToBeEncrypted[int64]
-	NewCreationProcessType    encrypt.ToBeEncrypted[model.ECreationProcess]
+	CurrentId                 encrypt.ToBeEncrypted[string]                  `json:"current_id"`
+	CurrentOwnerPublicKeys    []encrypt.ToBeEncrypted[string]                `json:"current_owner_public_keys"`
+	CurrentSignatures         []string                                       `json:"current_signatures"`
+	CurrentTransactionTime_ms encrypt.ToBeEncrypted[int64]                   `json:"current_transaction_time_ms"`
+	NewId                     encrypt.ToBeEncrypted[string]                  `json:"new_id"`
+	NewOwnerPublicKeys        []encrypt.ToBeEncrypted[string]                `json:"new_owner_public_keys"`
+	NewSignatures             []string                                       `json:"new_signatures"`
+	NewTransactionTime_ms     encrypt.ToBeEncrypted[int64]                   `json:"new_transaction_time_ms"`
+	NewCreationProcessType    *encrypt.ToBeEncrypted[model.ECreationProcess] `json:"new_creation_process_type"`
 }
 
 func (v *assetView) TransferAsset(
@@ -114,17 +136,30 @@ func (v *assetView) TransferAsset(
 		return "", err
 	}
 
+	newCreationProcessType := encrypt.ToBeEncrypted[model.ECreationProcess]{
+		EncryptionType: encrypt.ENCRYPT_TYPE_UNENCRYPTED,
+		Value:          model.ECreationProcessTransfer,
+	}
+
+	if request.NewCreationProcessType != nil {
+		newCreationProcessType = *request.NewCreationProcessType
+	}
+
+	transferAssetArg := asset_controller.TransferAssetArgs{
+		CurrentId:                 &request.CurrentId,
+		CurrentSignatures:         request.CurrentSignatures,
+		CurrentTransactionTime_ms: &request.CurrentTransactionTime_ms,
+		NewId:                     &request.NewId,
+		NewSignatures:             request.NewSignatures,
+		NewOwnerPublicKeys:        request.NewOwnerPublicKeys,
+		NewTransactionTime_ms:     &request.NewTransactionTime_ms,
+		NewCreationProcessType:    &newCreationProcessType,
+		SmartContract:             service,
+	}
+
 	newAsset, stackErr := v.controller.TransferAsset(
 		ctx,
-		service,
-		&request.CurrentId,
-		request.CurrentSignature,
-		&request.CurrentTransactionTime_ms,
-		&request.NewId,
-		request.NewSignature,
-		&request.NewOwnerPublicKey,
-		&request.NewTransactionTime_ms,
-		&request.NewCreationProcessType,
+		&transferAssetArg,
 	)
 
 	if stackErr != nil {

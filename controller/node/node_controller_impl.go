@@ -55,6 +55,7 @@ func (c *nodeControllerImpl[T]) CreateNode(
 	SmartContract controller.SmartContractServiceI,
 	TransactionTime *encrypt.ToBeEncrypted[int64],
 	Node *model.Node[T],
+	Signatures []string,
 ) (*model.Node[T], utility.Error) {
 	nodeId := Node.Header.Id
 	if !c.nameService.IsFullId(nodeId) {
@@ -90,7 +91,7 @@ func (c *nodeControllerImpl[T]) CreateNode(
 	}
 	newNode.Header.CreatedTime = *createTime
 
-	return c.SetNode(Ctx, SmartContract, TransactionTime, Node)
+	return c.SetNode(Ctx, SmartContract, TransactionTime, Node, Signatures)
 }
 
 func (c *nodeControllerImpl[T]) SetNode(
@@ -98,6 +99,7 @@ func (c *nodeControllerImpl[T]) SetNode(
 	SmartContract controller.SmartContractServiceI,
 	TransactionTime *encrypt.ToBeEncrypted[int64],
 	Node *model.Node[T],
+	Signatures []string,
 ) (*model.Node[T], utility.Error) {
 	nodeId := Node.Header.Id
 	newNode, stackErr := utility.DeepCopy(Node)
@@ -132,23 +134,26 @@ func (c *nodeControllerImpl[T]) SetNode(
 		return nil, utility.NewError(utility.ErrNotAllowed).AddMessage("node is finalized")
 	}
 
-	ownerPublicKey := Node.Header.OwnerPublicKey.Decrypted.Get()
-	signature := Node.Header.Signature
-
-	nodeWithoutSignature, stackErr := utility.DeepCopy(newNode)
-	if stackErr != nil {
-		return nil, stackErr.AddMessage("fail to set node")
+	if len(Node.Header.OwnerPublicKeys) != len(Signatures) {
+		return nil, utility.NewError(utility.ErrInvalidArgument).AddMessage("all signatures must be provided")
 	}
 
-	nodeWithoutSignature.Header.Signature = ""
-	nodeWithoutSignatureJson, err := json.Marshal(nodeWithoutSignature)
+	nodeJson, err := json.Marshal(Node)
 	if err != nil {
-		return nil, utility.NewError(err).AddMessage("fail to marshal nodeWithoutSignature")
+		return nil, utility.NewError(err)
 	}
 
-	errorWithStackTrace = verify(string(nodeWithoutSignatureJson), ownerPublicKey, signature)
-	if errorWithStackTrace != nil {
-		return nil, errorWithStackTrace.AddMessage("fail to verify node")
+	for i := range Node.Header.OwnerPublicKeys {
+		decrypted := Node.Header.OwnerPublicKeys[i].Decrypted
+		if decrypted == nil {
+			return nil, utility.NewError(utility.ErrInvalidArgument).AddMessage("all public keys must be provided")
+		}
+		decryptedKey := decrypted.Get()
+		signature := Signatures[i]
+		stackErr := verify(string(nodeJson), decryptedKey, signature)
+		if stackErr != nil {
+			return nil, stackErr
+		}
 	}
 
 	SmartContract.PutState(Ctx, nodeId, newNode)

@@ -44,16 +44,13 @@ func NewAssetController(
 
 func (c *assetControllerImpl) CreateAsset(
 	Ctx context.Context,
-	SmartContract controller.SmartContractServiceI,
-	TransactionTime *encrypt.ToBeEncrypted[int64],
-	CreationProcessType *encrypt.ToBeEncrypted[model.ECreationProcess],
-	Asset *model.NodeAsset,
+	Args *CreateAssetArgs,
 ) (*model.NodeAsset, utility.Error) {
-	if CreationProcessType.Value != model.ECreationProcessCreate {
+	if Args.CreationProcessType.Value != model.ECreationProcessCreate {
 		return nil, utility.NewError(utility.ErrInvalidArgument).AddMessage("invalid creation process type")
 	}
-	Asset.Header.NodeType = model.ENodeTypeAsset
-	asset, err := c.nodeController.CreateNode(Ctx, SmartContract, TransactionTime, Asset)
+	Args.Asset.Header.NodeType = model.ENodeTypeAsset
+	asset, err := c.nodeController.CreateNode(Ctx, Args.SmartContract, Args.TransactionTime, Args.Asset, Args.Signatures)
 	if err != nil {
 		return nil, err
 	}
@@ -82,54 +79,51 @@ func (c *assetControllerImpl) getAsset(
 
 func (c *assetControllerImpl) TransferAsset(
 	Ctx context.Context,
-	SmartContract controller.SmartContractServiceI,
-	CurrentId *encrypt.ToBeEncrypted[string],
-	CurrentSignature string,
-	CurrentTransactionTime_ms *encrypt.ToBeEncrypted[int64],
-	NewId *encrypt.ToBeEncrypted[string],
-	NewSignature string,
-	NewOwnerPublicKey *encrypt.ToBeEncrypted[string],
-	NewTransactionTime_ms *encrypt.ToBeEncrypted[int64],
-	NewCreationProcessType *encrypt.ToBeEncrypted[model.ECreationProcess],
+	Args *TransferAssetArgs,
 ) (*model.NodeAsset, utility.Error) {
 	var err utility.Error
-	if CurrentTransactionTime_ms.Value != NewTransactionTime_ms.Value {
+	if Args.CurrentTransactionTime_ms.Value != Args.NewTransactionTime_ms.Value {
 		return nil, utility.NewError(utility.ErrInvalidArgument).AddMessage("mismatched transaction time")
 	}
 
-	if NewCreationProcessType.Value != model.ECreationProcessTransfer {
+	if Args.NewCreationProcessType.Value != model.ECreationProcessTransfer {
 		return nil, utility.NewError(utility.ErrInvalidArgument).AddMessage("invalid transfer process type")
 	}
 
 	// build encrypted values first
-	currentId := CurrentId.Value
-	encryptedCurrentId, err := encrypt.BuildEncrypted(CurrentId)
+	currentId := Args.CurrentId.Value
+	encryptedCurrentId, err := encrypt.BuildEncrypted(Args.CurrentId)
 	if err != nil {
 		return nil, err
 	}
 
-	encryptedNewOwnerPublicKey, err := encrypt.BuildEncrypted(NewOwnerPublicKey)
+	encryptedNewOwnerPublicKeys := make([]encrypt.Encrypted[string], len(Args.NewOwnerPublicKeys))
+	for i := range Args.NewOwnerPublicKeys {
+		encryptedNewOwnerPublicKey, err := encrypt.BuildEncrypted(&Args.NewOwnerPublicKeys[i])
+		if err != nil {
+			return nil, err
+		}
+
+		encryptedNewOwnerPublicKeys[i] = *encryptedNewOwnerPublicKey
+	}
+
+	encryptedTransactionTime, err := encrypt.BuildEncrypted(Args.NewTransactionTime_ms)
 	if err != nil {
 		return nil, err
 	}
 
-	encryptedTransactionTime, err := encrypt.BuildEncrypted(NewTransactionTime_ms)
+	encryptedCurrentTransactionTime, err := encrypt.BuildEncrypted(Args.CurrentTransactionTime_ms)
 	if err != nil {
 		return nil, err
 	}
 
-	encryptedCurrentTransactionTime, err := encrypt.BuildEncrypted(CurrentTransactionTime_ms)
+	newId := Args.NewId.Value
+	encryptedNewId, err := encrypt.BuildEncrypted(Args.NewId)
 	if err != nil {
 		return nil, err
 	}
 
-	newId := NewId.Value
-	encryptedNewId, err := encrypt.BuildEncrypted(NewId)
-	if err != nil {
-		return nil, err
-	}
-
-	encryptedNewCreationProcess, err := encrypt.BuildEncrypted(NewCreationProcessType)
+	encryptedNewCreationProcess, err := encrypt.BuildEncrypted(Args.NewCreationProcessType)
 	if err != nil {
 		return nil, err
 	}
@@ -144,14 +138,14 @@ func (c *assetControllerImpl) TransferAsset(
 		return nil, err
 	}
 
-	newIdExist, err := c.nodeController.DoesIdExist(Ctx, SmartContract, newId)
+	newIdExist, err := c.nodeController.DoesIdExist(Ctx, Args.SmartContract, newId)
 	if newIdExist {
 		return nil, utility.NewError(utility.ErrAlreadyExists)
 	}
 
 	currentAsset, err := c.getAsset(
 		Ctx,
-		SmartContract,
+		Args.SmartContract,
 		currentId,
 	)
 	if err != nil {
@@ -171,8 +165,7 @@ func (c *assetControllerImpl) TransferAsset(
 		model.ENodeTypeAsset,
 		newId,
 		false,
-		encryptedNewOwnerPublicKey,
-		NewSignature,
+		encryptedNewOwnerPublicKeys,
 		model.Edges{},
 		model.Edges{},
 		encryptedTransactionTime,
@@ -185,7 +178,7 @@ func (c *assetControllerImpl) TransferAsset(
 		newAsset,
 	)
 
-	newNodeAsset, err = c.nodeController.CreateNode(Ctx, SmartContract, NewTransactionTime_ms, newNodeAsset)
+	newNodeAsset, err = c.nodeController.CreateNode(Ctx, Args.SmartContract, Args.NewTransactionTime_ms, newNodeAsset, Args.NewSignatures)
 	if err != nil {
 		return nil, err
 	}
@@ -197,11 +190,10 @@ func (c *assetControllerImpl) TransferAsset(
 	}
 	updatedAsset.Header.UpdatedTime = *encryptedCurrentTransactionTime
 	updatedAsset.Header.CreatedTime = *encryptedCurrentTransactionTime
-	updatedAsset.Header.Signature = CurrentSignature
 	updatedAsset.Header.IsFinalized = true
-	updatedAsset.Header.ChildIdren = append(updatedAsset.Header.ChildIdren, *encryptedNewId)
+	updatedAsset.Header.Children = append(updatedAsset.Header.Children, *encryptedNewId)
 
-	updatedAsset, err = c.nodeController.SetNode(Ctx, SmartContract, NewTransactionTime_ms, updatedAsset)
+	updatedAsset, err = c.nodeController.SetNode(Ctx, Args.SmartContract, Args.NewTransactionTime_ms, updatedAsset, Args.CurrentSignatures)
 	if err != nil {
 		return nil, err
 	}

@@ -16,6 +16,7 @@ type Error interface {
 	AddMessage(message string) Error
 	AddError(err error) Error
 	String() string
+	Message() string
 	Is(target error) bool
 }
 
@@ -27,6 +28,10 @@ func NewError(err error) Error {
 		errors:  []error{err},
 		message: err.Error(),
 	}
+}
+
+func (e *errorImpl) Message() string {
+	return e.message
 }
 
 func (e *errorImpl) String() string {

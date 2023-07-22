@@ -31,14 +31,14 @@ var ErrInvalidTimestamp = fmt.Errorf("%w: invalid timestamp", utility.ErrInvalid
 type NodeController[T any] interface {
 	// verify node id doesnot exist. If it does, return AlreadyExists error
 	// then call SetNode
-	CreateNode(ctx context.Context, smartContract controller.SmartContractServiceI, time *encrypt.ToBeEncrypted[int64], node *model.Node[T]) (*model.Node[T], utility.Error)
+	CreateNode(ctx context.Context, smartContract controller.SmartContractServiceI, time *encrypt.ToBeEncrypted[int64], node *model.Node[T], Signatures []string) (*model.Node[T], utility.Error)
 	// verify that signature matches, timestamp is within allowed limit
 	// return ErrInvalidTimestamp if timestamp fails
 	// return ErrInvalidSignature if signature fails
 	// return ErrInvalidArgument for other argument failure
 	// set updatedTime to timestamp
 	// set id to full id if it is not
-	SetNode(ctx context.Context, smartContract controller.SmartContractServiceI, time *encrypt.ToBeEncrypted[int64], node *model.Node[T]) (*model.Node[T], utility.Error)
+	SetNode(ctx context.Context, smartContract controller.SmartContractServiceI, time *encrypt.ToBeEncrypted[int64], node *model.Node[T], Signatures []string) (*model.Node[T], utility.Error)
 	// check if node ids are available
 	// returns false if any one id does not exist
 	AreIdsAvailable(ctx context.Context, smartContract controller.SmartContractServiceI, nodeIds map[string]bool) (bool, utility.Error)

@@ -27,15 +27,14 @@ const (
 )
 
 type Header struct {
-	NodeType       ENodeType                 `json:"type"`
-	Id             string                    `json:"id"`
-	IsFinalized    bool                      `json:"is_finalized"`
-	OwnerPublicKey encrypt.Encrypted[string] `json:"owner_public_key"`
-	Signature      string                    `json:"signature"`
-	Parents        Edges                     `json:"parents"`
-	ChildIdren     Edges                     `json:"children"`
-	CreatedTime    encrypt.Encrypted[int64]  `json:"created_time"`
-	UpdatedTime    encrypt.Encrypted[int64]  `json:"updated_time"`
+	NodeType        ENodeType                   `json:"type"`
+	Id              string                      `json:"id"`
+	IsFinalized     bool                        `json:"is_finalized"`
+	OwnerPublicKeys []encrypt.Encrypted[string] `json:"owner_public_key"`
+	Parents         Edges                       `json:"parents"`
+	Children        Edges                       `json:"children"`
+	CreatedTime     encrypt.Encrypted[int64]    `json:"created_time"`
+	UpdatedTime     encrypt.Encrypted[int64]    `json:"updated_time"`
 }
 
 type Node[T any] struct {
@@ -49,23 +48,21 @@ func NewHeader(
 	NodeType ENodeType,
 	Id string,
 	IsFinalized bool,
-	OwnerPublicKey *encrypt.Encrypted[string],
-	Signature string,
+	OwnerPublicKeys []encrypt.Encrypted[string],
 	Parents Edges,
-	ChildIdren Edges,
+	Children Edges,
 	CreatedTime *encrypt.Encrypted[int64],
 	UpdatedTime *encrypt.Encrypted[int64],
 ) *Header {
 	return &Header{
-		NodeType:       NodeType,
-		Id:             Id,
-		IsFinalized:    IsFinalized,
-		OwnerPublicKey: *OwnerPublicKey,
-		Signature:      Signature,
-		Parents:        Parents,
-		ChildIdren:     ChildIdren,
-		CreatedTime:    *CreatedTime,
-		UpdatedTime:    *UpdatedTime,
+		NodeType:        NodeType,
+		Id:              Id,
+		IsFinalized:     IsFinalized,
+		OwnerPublicKeys: OwnerPublicKeys,
+		Parents:         Parents,
+		Children:        Children,
+		CreatedTime:     *CreatedTime,
+		UpdatedTime:     *UpdatedTime,
 	}
 }
 

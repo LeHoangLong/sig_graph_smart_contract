@@ -3,7 +3,7 @@ package encrypt
 import "sig_graph/utility"
 
 type DecryptUnencrypted[T any] struct {
-	decrypted T
+	Decrypted T
 }
 
 func newDecryptUnencrypted[T any](
@@ -15,10 +15,10 @@ func newDecryptUnencrypted[T any](
 		return ret, err
 	}
 
-	ret.decrypted = val
+	ret.Decrypted = val
 	return ret, nil
 }
 
 func (d *DecryptUnencrypted[T]) Get() T {
-	return d.decrypted
+	return d.Decrypted
 }

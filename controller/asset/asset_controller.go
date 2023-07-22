@@ -28,10 +28,7 @@ type AssetController interface {
 	// return ErrAlreadyExists f id already used
 	CreateAsset(
 		Ctx context.Context,
-		SmartContract controller.SmartContractServiceI,
-		TransactionTime *encrypt.ToBeEncrypted[int64],
-		CreationProcessType *encrypt.ToBeEncrypted[model.ECreationProcess],
-		Asset *model.NodeAsset,
+		Args *CreateAssetArgs,
 	) (*model.NodeAsset, utility.Error)
 
 	// return ErrNotFound if no material with currentId
@@ -39,14 +36,26 @@ type AssetController interface {
 	// return new transferred asset
 	TransferAsset(
 		Ctx context.Context,
-		SmartContract controller.SmartContractServiceI,
-		CurrentId *encrypt.ToBeEncrypted[string],
-		CurrentSignature string,
-		CurrentTransactionTime_ms *encrypt.ToBeEncrypted[int64],
-		NewId *encrypt.ToBeEncrypted[string],
-		NewSignature string,
-		NewOwnerPublicKey *encrypt.ToBeEncrypted[string],
-		NewTransactionTime_ms *encrypt.ToBeEncrypted[int64],
-		NewCreationProcessType *encrypt.ToBeEncrypted[model.ECreationProcess],
+		Args *TransferAssetArgs,
 	) (*model.NodeAsset, utility.Error)
+}
+
+type CreateAssetArgs struct {
+	SmartContract       controller.SmartContractServiceI
+	TransactionTime     *encrypt.ToBeEncrypted[int64]
+	CreationProcessType *encrypt.ToBeEncrypted[model.ECreationProcess]
+	Asset               *model.NodeAsset
+	Signatures          []string
+}
+
+type TransferAssetArgs struct {
+	SmartContract             controller.SmartContractServiceI
+	CurrentId                 *encrypt.ToBeEncrypted[string]
+	CurrentSignatures         []string
+	CurrentTransactionTime_ms *encrypt.ToBeEncrypted[int64]
+	NewId                     *encrypt.ToBeEncrypted[string]
+	NewSignatures             []string
+	NewOwnerPublicKeys        []encrypt.ToBeEncrypted[string]
+	NewTransactionTime_ms     *encrypt.ToBeEncrypted[int64]
+	NewCreationProcessType    *encrypt.ToBeEncrypted[model.ECreationProcess]
 }
