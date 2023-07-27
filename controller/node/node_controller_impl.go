@@ -76,7 +76,7 @@ func (c *nodeControllerImpl[T]) CreateNode(
 		return nil, err.AddMessage("fail to create node")
 	}
 
-	if !exists {
+	if exists {
 		return nil, utility.NewError(utility.ErrAlreadyExists).AddMessage("id already exists")
 	}
 
@@ -127,10 +127,10 @@ func (c *nodeControllerImpl[T]) SetNode(
 		return nil, utility.NewError(ErrInvalidTimestamp).AddError(utility.ErrInvalidArgument).AddMessage(fmt.Sprintf("local time: %d, time_ms: %d, max diff: %d", localTime, time_ms, c.settings.MaxTimeDifference_ms()))
 	}
 
-	isNodeFinalized, errorWithStackTrace := c.isNodeFinalized(Ctx, SmartContract, nodeId)
+	isNodePresentAndFinalized, errorWithStackTrace := c.isNodePresentAndFinalized(Ctx, SmartContract, nodeId)
 	if errorWithStackTrace != nil {
 		return nil, errorWithStackTrace
-	} else if isNodeFinalized {
+	} else if isNodePresentAndFinalized {
 		return nil, utility.NewError(utility.ErrNotAllowed).AddMessage("node is finalized")
 	}
 
@@ -180,7 +180,7 @@ func (c *nodeControllerImpl[T]) AreIdsAvailable(
 	return true, nil
 }
 
-func (c *nodeControllerImpl[T]) isNodeFinalized(
+func (c *nodeControllerImpl[T]) isNodePresentAndFinalized(
 	ctx context.Context,
 	smartContract controller.SmartContractServiceI,
 	nodeId string,
@@ -188,6 +188,10 @@ func (c *nodeControllerImpl[T]) isNodeFinalized(
 	node := model.Node[T]{}
 	err := smartContract.GetState(ctx, nodeId, &node)
 	if err != nil {
+		if err == utility.ErrNotFound {
+			return false, nil
+		}
+
 		return false, utility.NewError(err).AddMessage("fail to get state from smart contract")
 	}
 

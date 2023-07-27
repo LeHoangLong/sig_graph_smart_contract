@@ -41,4 +41,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/barkimedes/go-deepcopy v0.0.0-20220514131651-17c30cfc62df => github.com/LeHoangLong/go-deepcopy v0.0.1
+replace github.com/barkimedes/go-deepcopy v0.0.0-20220514131651-17c30cfc62df => github.com/LeHoangLong/go-deepcopy v1.0.0

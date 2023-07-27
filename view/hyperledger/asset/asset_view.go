@@ -80,7 +80,7 @@ func (c *assetView) CreateAsset(
 	for i := range request.OwnerPublicKeys {
 		encryptedKey, stackErr := encrypt.BuildEncrypted(&request.OwnerPublicKeys[i])
 		if stackErr != nil {
-			return "", fmt.Errorf(stackErr.Message())
+			return "", fmt.Errorf(stackErr.String())
 		}
 		request.Asset.Header.OwnerPublicKeys[i] = *encryptedKey
 	}

@@ -1,12 +1,23 @@
 version: '3.0'
 services:
   smart_contract:
-    image: hyperledger/fabric-tools
+    image: hyperledger/fabric-tools:2.5
     volumes:
       - ./:/root/sig_graph
       - ./dev/test-network:/opt/fabric
     working_dir: /root/sig_graph
-    command: bash -c 'git config --global --add safe.directory /root/sig_graph && sleep infinity'
+    command: sleep infinity
+    network_mode: host
+    environment:
+      - FABRIC_HOME=/opt/fabric
+
+  golang:
+    image: golang:1.20.6-bullseye
+    volumes:
+      - ./:/root/sig_graph
+      - ./dev/test-network:/opt/fabric
+    working_dir: /root/sig_graph
+    command: sleep infinity
     network_mode: host
     environment:
       - FABRIC_HOME=/opt/fabric
